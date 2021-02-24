@@ -1,0 +1,47 @@
+{
+  "name":"ArrhythmiaClassification", 
+  "author":"xy", 
+  "description":"ArrhythmiaClassification", 
+  "topic":"数据分类", 
+  "model":{
+    "input":{
+      "columns":[
+        {
+          "name":"data", 
+          "type":"list", 
+          "sample":"[0.7240143418312072, 0.7096773982048035, ...]"
+        }
+      ]
+    }, 
+    "output":{
+      "columns":[
+        {
+          "name":"label", 
+          "type":"str", 
+          "sample":"S"
+        }
+      ]
+    }
+  }, 
+  "data":{
+    "source":[
+      {
+        "id":"ArrhythmiaClassification", 
+        "name":"ArrhythmiaClassification", 
+        "source":"ArrhythmiaClassification"
+      }
+    ]
+  }, 
+  "project":{
+    "id":"ArrhythmiaClassification", 
+    "language":"Python3", 
+    "algorithm":"CNN", 
+    "framework":"Tensorflow", 
+    "train":{
+      "file":"main.py"
+    }, 
+    "prediction":{
+      "file":"prediction.py"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+imbalanced-learn
+flyai
+numpy
+joblib
+pandas
+xgboost==1.3.3
+lightgbm
+pytorch-lightning==1.1.0
+albumentations
