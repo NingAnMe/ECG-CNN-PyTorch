@@ -120,11 +120,12 @@ class LabelSmoothCrossEntropyLoss(_WeightedLoss):
 
 
 class BiTemperedLogisticLoss(_Loss):
-    def __init__(self, reduction='mean', t1=1, t2=1, label_smoothing=0.0, num_iters=5):
+    def __init__(self, reduction='mean', t1=1, t2=1, label_smoothing=0.0, OHEM=0.0, num_iters=5):
         super().__init__(reduction=reduction)
         self.t1 = t1
         self.t2 = t2
         self.label_smoothing = label_smoothing
+        self.OHEM = OHEM
         self.num_iters = num_iters
 
     @classmethod
@@ -233,6 +234,9 @@ class BiTemperedLogisticLoss(_Loss):
         loss = temp1 - temp2
 
         loss = loss.sum(dim=-1)
+        # 应用 OHEM
+        if self.OHEM > 0:
+            loss, _ = loss.topk(k=int(self.OHEM * loss.size(0)), dim=0)
 
         if self.reduction == 'sum':
             loss = loss.sum()

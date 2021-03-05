@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 
 import pytorch_lightning as pl
+from pytorch_lightning.metrics import functional as FM
 
 from loss import LabelSmoothCrossEntropyLoss, BiTemperedLogisticLoss, FocalLoss
 from optimizer import Ranger, Ranger2000, Novograd, RangerLars
@@ -74,7 +75,7 @@ class Classifier(pl.LightningModule):
         elif loss_function == 'LabelSmoothCrossEntropyLoss':
             loss_func = LabelSmoothCrossEntropyLoss(smoothing=0.2)
         elif loss_function == 'BiTemperedLogisticLoss':
-            loss_func = BiTemperedLogisticLoss(reduction='sum', t1=0.8, t2=1.4, label_smoothing=0.2)
+            loss_func = BiTemperedLogisticLoss(reduction='mean', t1=0.8, t2=1.4, label_smoothing=0.2, OHEM=0.7)
         elif loss_function == 'FocalLoss':
             loss_func = FocalLoss(reduction='sum', alpha=0.25, gamma=2, smooth_eps=0.2, class_num=5)
         else:
@@ -138,49 +139,57 @@ class Classifier(pl.LightningModule):
             loss = self.fmix.loss(pred, y, loss_function=self.m_loss_function)
         else:
             loss = self.m_loss_function(pred, y)
-        self.m_accuracy_train.update(pred, y)
+        y_hat = torch.argmax(torch.nn.functional.softmax(pred, dim=1), dim=1)
+        acc = FM.accuracy(y_hat, y)
 
-        return loss
+        return {'loss': loss, 'acc': acc}
 
     def training_epoch_end(self, outputs):
-        print("training_epoch_end")
         nums = len(outputs)
-        self.l_loss_train = None
+        print("training_epoch_end {}".format(nums))
+        # print(outputs)
+        l_loss = None
+        l_acc = None
         for i in outputs:
-            self.l_loss_train = self.l_loss_train + i['loss'] if self.l_loss_train is not None else i['loss']
-        self.l_loss_train /= nums
-        self.l_acc_train = self.m_accuracy_train.compute()
-        self.m_accuracy_train.reset()
+            l_loss = l_loss + i['loss'] if l_loss is not None else i['loss']
+            l_acc = l_acc + i['acc'] if l_acc is not None else i['acc']
+        l_loss /= nums
+        l_acc /= nums
 
-        self.log('loss_train', self.l_loss_train, on_epoch=True)
-        self.log('acc_train', self.l_acc_train, on_epoch=True)
+        self.log('loss_train', l_loss, on_epoch=True)
+        self.log('acc_train', l_acc, on_epoch=True)
 
-        train_log(loss_train=self.l_loss_train,
-                  acc_train=self.l_acc_train,
-                  loss_val=self.l_loss_val,
-                  acc_val=self.l_acc_val)
+        train_log(loss_train=l_loss,
+                  acc_train=l_acc,)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
         pred = self.forward(x)
         loss = self.m_loss_function(pred, y)
-        self.m_accuracy_val.update(pred, y)
+        y_hat = torch.argmax(torch.softmax(pred, dim=1), dim=1)
+        acc = FM.accuracy(y_hat, y)
+        print(FM.confusion_matrix(y_hat, y, 5, normalize=None))
+        print(FM.confusion_matrix(y_hat, y, 5, normalize='true'))
 
-        return loss
+        return {'loss': loss, 'acc': acc}
 
     def validation_epoch_end(self, outputs):
-        print("validation_epoch_end")
         nums = len(outputs)
-        self.l_loss_val = None
+        print("validation_epoch_end: {}".format(nums))
+        # print(outputs)
+        l_loss = None
+        l_acc = None
         for i in outputs:
-            self.l_loss_val = self.l_loss_val + i if self.l_loss_val is not None else i
-        self.l_loss_val /= nums
+            l_loss = l_loss + i['loss'] if l_loss is not None else i['loss']
+            l_acc = l_acc + i['acc'] if l_acc is not None else i['acc']
+        l_loss /= nums
+        l_acc /= nums
 
-        self.l_acc_val = self.m_accuracy_val.compute()
-        self.m_accuracy_val.reset()
+        self.log('loss_val', l_loss, on_epoch=True)
+        self.log('acc_val', l_acc, on_epoch=True)
 
-        self.log('loss_val', self.l_loss_val, on_epoch=True)
-        self.log('acc_val', self.l_acc_val, on_epoch=True)
+        train_log(loss_val=l_loss,
+                  acc_val=l_acc)
 
     def test_step(self, batch, batch_idx):
         """
