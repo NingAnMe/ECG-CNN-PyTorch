@@ -22,7 +22,6 @@ class AnomalyClassifier(nn.Module):
         self.dense2 = nn.Linear(32, 32)
 
         self.dense_final = nn.Linear(32, num_classes)
-        # self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         residual = self.conv(x)
@@ -56,9 +55,7 @@ class AnomalyClassifier(nn.Module):
         x = self.maxpool(x)  # [512 32 8]
 
         # MLP
-        print(x.shape)
         x = x.view(-1, 32 * 8)  # Reshape (current_dim, 32*8)
         x = F.relu(self.dense1(x))
         x = self.dense2(x)
-        # x = self.softmax(self.dense_final(x))
         return x

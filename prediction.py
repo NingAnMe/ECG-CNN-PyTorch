@@ -18,6 +18,7 @@ class Prediction(FlyAI):
         """
         模型初始化，必须在此方法中加载模型
         """
+        # CNN
         self.models = list()
         for i in range(0, 5):
             checkpoint_dir = os.path.join(MODEL_PATH, f'lightning_logs/version_{i}/checkpoints')
@@ -30,7 +31,9 @@ class Prediction(FlyAI):
             model = Classifier.load_from_checkpoint(checkpoint, net=net)
             model.to(device)
             self.models.append(model)
-            # self.model = joblib.load(os.path.join(MODEL_PATH, 'model.pkl'))
+
+        # xgboost
+        # self.model = joblib.load(os.path.join(MODEL_PATH, 'model.pkl'))
 
     def predict(self, data):
         """
@@ -41,6 +44,8 @@ class Prediction(FlyAI):
         labels = list()
         data = np.array(data)
         data = data.reshape(1, -1)
+
+        # CNN
         data = data[:, np.newaxis, :]
         for model in self.models:
             y_hat = model.predict(data)
@@ -48,6 +53,11 @@ class Prediction(FlyAI):
             labels.append(label.tolist()[0])
         c = Counter(labels)
         return c.most_common(1)[0][0]
+
+        # xgboost
+        # y_hat = self.model.predict(data)
+        # label = label_encoder.inverse_transform(y_hat)
+        # return label[0]
 
 
 if __name__ == '__main__':
